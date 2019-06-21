@@ -17,19 +17,19 @@ namespace Asteroids
 		/// <summary>
 		/// Ширина главного окна
 		/// </summary>
-		internal static int w;
+		internal static int width;
 		/// <summary>
 		/// Высота главного окна
 		/// </summary>
-		internal static int h;
+		internal static int height;
 		/// <summary>
 		/// Кол-во выстрелов
 		/// </summary>
-		internal static int hit = 0;
+		internal static int counthit;
 		/// <summary>
 		/// Игровой счёт
 		/// </summary>
-		internal static int schet = 0;
+		internal static int score;
 
 		internal static AsteroidsField asteroidnoePole;
 		internal static IGameObject staticheskiyFon;
@@ -37,15 +37,15 @@ namespace Asteroids
 		/// <summary>
 		/// Корабль игрока
 		/// </summary>
-		internal static StarShip abc;
+		internal static StarShip playerShip;
 		/// <summary>
 		/// Снаряды
 		/// </summary>
-		internal static List<Bullet> b = new List<Bullet>();
+		internal static List<Bullet> shells = new List<Bullet>();
 		/// <summary>
 		/// Взрыв
 		/// </summary>
-		internal static Collapse bah;
+		internal static Collapse explosion;
 		internal static Form gameForm;
 		/// <summary>
 		/// Кнопка паузы
@@ -58,13 +58,13 @@ namespace Asteroids
 		/// <summary>
 		/// Текущая координат X курсора мыши
 		/// </summary>
-		internal static int mX;
+		internal static int currentCordinateX;
 		/// <summary>
 		/// Текущая координат Y курсора мыши
 		/// </summary>
-		internal static int mY;
+		internal static int currentCordinateY;
 		// Изображения
-		internal static Image[] ci;
+		internal static Image[] ci;//даже не придумал название потомучто не понятно что это
 		internal static Image[] bi;
 		internal static Image[] ssi;
 		internal static Image[] esi;
@@ -75,7 +75,7 @@ namespace Asteroids
 		/// <summary>
 		/// Таймер
 		/// </summary>
-		private static Timer t = new Timer { Interval = 5 };
+		private static Timer timer = new Timer { Interval = 5 };
 
 		internal delegate void GameEventHandler(string message);
 		internal static event GameEventHandler _event;
@@ -154,90 +154,92 @@ namespace Asteroids
 			// Создаем объект (поверхность рисования) и связываем его с формой
 			// Запоминаем размеры формы
 			gameForm.Text = "Asteroids";
-			w = form.ClientSize.Width;
-			h = form.ClientSize.Height;
+			width = form.ClientSize.Width;
+			height = form.ClientSize.Height;
 			//Cursor.Hide();
 
 			// Связываем буфер в памяти с графическим объектом, чтобы рисовать в буфере
-			buf = _context.Allocate(g, new Rectangle(0, 0, w, h));
-			bufb = _context.Allocate(g, new Rectangle(0, 0, w, h));
+			buf = _context.Allocate(g, new Rectangle(0, 0, width, height));
+			bufb = _context.Allocate(g, new Rectangle(0, 0, width, height));
 			asteroidnoePole = new AsteroidsField();
 			staticheskiyFon = new Background();
 			animirovanniyFon = new BackgroundAnimation();
-			abc = new StarShip(new Point(50, Game.h / 2), 5, new Size(90, 30));
-			bah = new Collapse();
-			pauseButton = new PauseButton(new Point(Game.w / 2 - 20, 10), new Point(0, 0), new Size(80, 80));
+			playerShip = new StarShip(new Point(50, Game.height / 2), 5, new Size(90, 30));
+			explosion = new Collapse();
+			pauseButton = new PauseButton(new Point(Game.width / 2 - 20, 10), new Point(0, 0), new Size(80, 80));
 
-			t.Start();
-			t.Tick += (s, e) => {
+			timer.Start();
+			timer.Tick += (s, e) => {
 				//Рисуем все объекты
 				buf.Graphics.Clear(Color.Black);
 				staticheskiyFon.Draw();
 				animirovanniyFon.Draw();
 
-				foreach (var item in b)
+				foreach (var item in shells)
 				{
 					item.Draw();
 				}
 
-				abc.Draw();
-				bah.Draw();
+				playerShip.Draw();
+				explosion.Draw();
 				asteroidnoePole.Draw();
 
-				decimal statistic = schet != 0 && hit != 0 ? (decimal)schet / hit : 0;
+				decimal statistic = score != 0 && counthit != 0 ? (decimal)score / counthit : 0;
 				buf.Graphics
-					.DrawString($"Энергия: {abc.energy}     Сбито вражеских кораблей: {schet}     Сделано выстрелов: {hit}     Результативность: {(statistic * 100):F2}%",
+					.DrawString($"Энергия: {playerShip.energy}     Сбито вражеских кораблей: {score}     Сделано выстрелов: {counthit}     Результативность: {(statistic * 100):F2}%",
 					new Font(FontFamily.GenericSansSerif, 10, FontStyle.Regular), Brushes.White, 0, 0);
 				pauseButton.Draw();
 				buf.Render();
 
 				// Обновляем все объекты
-				if (b.Count > 0)
-					for (int i = 0; i < b.Count; i++)
+				
+					for (int i = 0; i < shells.Count; i++)
 					{
-						b[i]?.Update();
-						if (b[i].Pos.X >= Game.w || b[i].Pos.X < -b[i].Size.Width)
+						shells[i]?.Update();
+						if (shells[i].Pos.X >= Game.width || shells[i].Pos.X < -shells[i].Size.Width)
 						{
-							b.Remove(b[i]);
-							i = b.Count;
+							shells.Remove(shells[i]);
+							i = shells.Count;
 						}
 					}
 				asteroidnoePole.Update();
 				animirovanniyFon.Update();
-				abc.Update();
-				bah.Update();
+				playerShip.Update();
+				explosion.Update();
 
 				if (gofl)
-					Finish();
-				if (ftfl) { pfl = true; Pause(); ftfl = false; Pause(); }
+					ToFinish();
+				if (ftfl) { pfl = true; ToPause(); ftfl = false; ToPause(); }
 			};
+
+           
 
 			form.Resize += (sender, e) => {
 				_event?.Invoke("Попытка изменить размер окна");
 				Form form1 = (Form)sender;
 				if (form1.WindowState == FormWindowState.Minimized)
 				{
-					t.Stop();
+					timer.Stop();
 				}
 				if (form1.WindowState == FormWindowState.Maximized)
 				{
-					t.Start();
+					timer.Start();
 				}
-				form1.Width = w;
-				form1.Height = h;
+				form1.Width = width;
+				form1.Height = height;
 			};
-			form.KeyDown += (s, e) => { abc.ChangeShip(); };
+			form.KeyDown += (s, e) => { playerShip.ChangeShip(); };
 			form.MouseMove += (s, e) => {
-				mX = e.X;
-				mY = e.Y;
+				currentCordinateX = e.X;
+				currentCordinateY = e.Y;
 			};
 			form.MouseClick += (s, e) => {
 				if (!gofl && !pfl)
 				{
-					if (b.Count < 5)
+					if (shells.Count < 5)
 					{
-						hit++;
-						b.Add(new Bullet(new Point(abc.Pos.X + abc.Size.Width + 1, abc.Pos.Y + abc.Size.Height - 5), abc.Dir, new Size(32, 8)));
+						counthit++;
+						shells.Add(new Bullet(new Point(playerShip.Pos.X + playerShip.Size.Width + 1, playerShip.Pos.Y + playerShip.Size.Height - 5), playerShip.Dir, new Size(32, 8)));
 						Sounds.PlayShootSound();
 					}
 				}
@@ -254,12 +256,12 @@ namespace Asteroids
 		/// <summary>
 		/// Остановка игры
 		/// </summary>
-		public static void Finish()
+		public static void ToFinish()
 		{
 			_event?.Invoke("Конец игры");
-			t.Stop();
+			timer.Stop();
 			buf.Graphics.DrawString("The End", new Font(FontFamily.GenericSansSerif,
-			60, FontStyle.Underline), Brushes.White, w / 2 - 180, h / 2 - 90);
+			60, FontStyle.Underline), Brushes.White, width / 2 - 180, height / 2 - 90);
 			buf.Render();
 			Sounds.AmbientMusicOff();
 			gameForm.MouseClick += Form_MouseClick_First;
@@ -268,38 +270,38 @@ namespace Asteroids
 		/// <summary>
 		/// Пауза
 		/// </summary>
-		public static void Pause()
+		public static void ToPause()
 		{
 			if (pfl)
 			{
 				_event?.Invoke("Игра снята с паузы");
-				t.Start();
+				timer.Start();
 			}
 			else
 			{
 				_event?.Invoke("Игра поставлена на паузу");
-				t.Stop();
+				timer.Stop();
 				int fontSize = 15;
 
 				string str = "Asteroids";
 				buf.Graphics.DrawString(str, new Font(FontFamily.GenericSansSerif,
-				fontSize * 2, FontStyle.Bold), Brushes.White, w / 2 - str.Length / 2 * (fontSize - 7) * 3, h / 2 - 140);
+				fontSize * 2, FontStyle.Bold), Brushes.White, width / 2 - str.Length / 2 * (fontSize - 7) * 3, height / 2 - 140);
 
 				str = "Цель игры пролететь как можно дальше через астероидное поле";
 				buf.Graphics.DrawString(str, new Font(FontFamily.GenericSansSerif,
-				fontSize, FontStyle.Regular), Brushes.White, w / 2 - (str.Length * (fontSize - 5)) / 2, h / 2 - 70);
+				fontSize, FontStyle.Regular), Brushes.White, width / 2 - (str.Length * (fontSize - 5)) / 2, height / 2 - 70);
 
 				str = "Управляйте кораблём с помощью мыши(клик - запуск ракеты)";
 				buf.Graphics.DrawString(str, new Font(FontFamily.GenericSansSerif,
-				fontSize, FontStyle.Regular), Brushes.White, w / 2 - (str.Length * (fontSize - 5)) / 2, h / 2 - 30);
+				fontSize, FontStyle.Regular), Brushes.White, width / 2 - (str.Length * (fontSize - 5)) / 2, height / 2 - 30);
 
 				str = "Уворачивайтесь от столкновений и сбивайте астероиды";
 				buf.Graphics.DrawString(str, new Font(FontFamily.GenericSansSerif,
-				fontSize, FontStyle.Regular), Brushes.White, w / 2 - (str.Length * (fontSize - 5)) / 2, h / 2 + 10);
+				fontSize, FontStyle.Regular), Brushes.White, width / 2 - (str.Length * (fontSize - 5)) / 2, height / 2 + 10);
 
 				str = "Картинку корабля можно поменять нажав Enter на клавиатуре";
 				buf.Graphics.DrawString(str, new Font(FontFamily.GenericSansSerif,
-				fontSize, FontStyle.Bold), Brushes.White, w / 2 - (str.Length * (fontSize - 5)) / 2, h / 2 + 120);
+				fontSize, FontStyle.Bold), Brushes.White, width / 2 - (str.Length * (fontSize - 5)) / 2, height / 2 + 120);
 
 				buf.Render();
 			}
@@ -311,16 +313,16 @@ namespace Asteroids
 		{
 			Sounds.AmbientMusicOn();
 			gameForm.MouseClick -= Form_MouseClick_First;
-			hit = 0;
-			schet = 0;
+			counthit = 0;
+			score = 0;
 			gofl = false;
 			pfl = true;
-			abc.Pos = new Point(50, Game.h / 2);
-			abc.energy = 100;
-			Cursor.Position = abc.Pos;
+			playerShip.Pos = new Point(50, Game.height / 2);
+			playerShip.energy = 100;
+			Cursor.Position = playerShip.Pos;
 			asteroidnoePole.Clear();
-			t.Start();
-			Pause();
+			timer.Start();
+			ToPause();
 		}		
 	}
 }
